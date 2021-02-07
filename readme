@@ -1,0 +1,11 @@
+Load tweets as below
+
+loadsearchword1<- function(){
+  githubURL <- "https://github.com/zeonlee/math513presentation/raw/main/searchword1.RData"
+  load(url(githubURL), .GlobalEnv)
+}
+
+loadsearchword2<- function(){
+  githubURL <- "https://github.com/zeonlee/math513presentation/raw/main/searchword2.RData"
+  load(url(githubURL), .GlobalEnv)
+}
