@@ -9,3 +9,8 @@ loadsearchword2<- function(){
   githubURL <- "https://github.com/zeonlee/math513presentation/raw/main/searchword2.Rdata"
   load(url(githubURL), .GlobalEnv)
 }
+
+loadcardataNorway<- function(){
+     githubURL <- "https://github.com/zeonlee/math513presentation/raw/main/cardataNorway.Rdata"
+     load(url(githubURL), .GlobalEnv)
+}
