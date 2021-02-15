@@ -14,3 +14,8 @@ loadcardataNorway<- function(){
      githubURL <- "https://github.com/zeonlee/math513presentation/raw/main/cardataNorway.Rdata"
      load(url(githubURL), .GlobalEnv)
 }
+
+loadcardataElectric<- function(){
+     githubURL <- "https://github.com/zeonlee/math513presentation/raw/main/cardataElectric.Rdata"
+     load(url(githubURL), .GlobalEnv)
+}
