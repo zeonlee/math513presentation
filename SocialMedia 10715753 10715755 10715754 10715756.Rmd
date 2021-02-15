@@ -1,0 +1,512 @@
+---
+title: "MATH513 Sentiment Analysis Presentation"
+author: "Cassandria Goh (10715753), Lim Jun Yong (10715755), Lee Wei Jian (Zeon) (10715754), Muhammad Firdaus (10715756)"
+date: "2/15/2021"
+output: 
+  powerpoint_presentation:
+    reference_doc: testtheme.pptx
+    slide_level: 3
+---
+### Structure
+1. Case Study Introduction
+2. Exploration of Tweets & Sentiment Analysis
+3. Statistical Analysis
+4. Discussion & Conclusion
+
+
+### Business Case
+
+The net income of General Motors has been declining since 2015. Mary T.Barra, the CEO of General Motors, is tasked by the shareholders of the company to restructure and turnaround the business. The restructuring will involve closing down of factories and dropping slow moving car models. In order to steer the company into the right direction, Mary will need data to support her decision-making. 
+
+Mary has task the General Motor's data analytics team to perform sentiment analysis and provide statistical test on the analysis on the trend of electric cars compared to petrol cars. These findings will help the company to make the following decisions: 
+
+1. Convert existing factories facilities to manufacture electrical cars. 
+2. Convert existing factories facilities to improve the efficiency of the petrol cars. 
+
+### Objectives
+
+Our analysis should provide the business with a strategic decision or marketing interest. 
+
+1. Strategic decision: Whether to restructure the business from petrol cars to electric cars? 
+2. Marketing interest: Areas for marketing and promoting new products (e.g., electric cars). On football events, Superbowl?
+
+### Libraries used
+```{r libraries, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(rtweet)
+library(ggthemes)
+library(jsonlite)
+library(tidytext)
+library(wordcloud)
+library(wordcloud2)
+library(syuzhet)
+library(RColorBrewer)
+library(webr)
+library(gridExtra)
+```
+
+
+
+```{r token, setup, include=FALSE}
+create_token(
+  app = "cass_twitter_analysis_app", 
+  consumer_key = "M9cMq1v64MC65ZCtE1IQFAgmo", 
+  consumer_secret = "0jXicKFsWalUEPGdLciUH7MEXuenf0RtvjaJ9bsowM3mn0hsCd", 
+  access_token = "1332894396673523712-F7Vmk3oOsrgA1MMfas3u1FdlFqVMHF", 
+  access_secret = "AeW9QKpGTPfa9Bn3BmLz5GokxDckM4vmZDGj7rjVSVHJe")
+```
+# Sentiment Analysis 
+
+### Twitter Exploration
+
+In order to search Twitter, we decided to compare "electric car" vs "petrol car". Though other variations were tried, these two were the closest to our business case and could consistently produce results. 
+
+The code will return the most recent tweets that are not retweets as they can end up skewing the data. 
+  
+### Top 10 Words Electric vs Petrol 
+
+```{r top10words_code, include = FALSE}
+searchontwit <- function(word, n=1000){
+  search <- search_tweets(q = word, n = n, lang = "en", include_rts = FALSE)
+  search$stripped_text <- gsub("http.*","",  search$text)
+  search$stripped_text <- gsub("https.*","", search$stripped_text)
+  search$stripped_text <- gsub("amp","", search$stripped_text)
+  return(search)
+}
+
+categorize <- function(df1, df2, w1 = word1, w2 = word2){
+  first <- df1 %>% mutate(category = w1)
+  second <- df2 %>% mutate(category = w2)
+  result <- rbind(first, second)
+  return(result)
+}
+
+tokentext <- function(dataframe){
+  cleandf <- dataframe %>% 
+    select(stripped_text) %>% 
+    mutate(tweetnumber = row_number()) %>% # create new variable denoting the tweet number
+    unnest_tokens(word, stripped_text) %>%
+    filter(!(word %in% c(stop_words$word, unlist(strsplit(word1, " ")), unlist(strsplit(word2, " ")), "cars")))
+}
+
+topdata <- function(dataframe){
+  result <- dataframe %>% 
+    count(word, sort = TRUE) %>%
+    mutate(word = reorder(word, n))
+  return (result)
+}
+
+top10data <- function(dataframe){
+  result <- topdata(dataframe) %>%
+    head(10)
+  return (result)
+}
+
+top10graph <- function(dataframe){
+  graph <-  ggplot(dataframe, aes(x = reorder(word, n), y = n, fill = category)) +
+    geom_col() +
+    coord_flip() +
+    labs(x = "Unique Words", y = "Frequency",
+         title = "Top 10 most popular words found in tweets") +
+    theme(axis.text = element_text(size = 14), 
+          axis.title = element_text(size = 14),
+          title = element_text(size = 16), legend.position = "none") + 
+    facet_wrap(~category, scales = "free")
+}
+
+top10final <- function(searchword1, searchword2){
+  token1 <- tokentext(searchword1)
+  token2 <- tokentext(searchword2)
+  top1 <- top10data(token1)
+  top2 <- top10data(token2)
+  finaldf <- categorize(top1, top2)
+  graph <- top10graph(finaldf)
+  return(graph)
+}
+
+word1 <- "electric car"
+word2 <- "petrol car"
+
+# Additional dataset required
+
+# There are 2 methods which can be used to retrieve datasets. The first is by using the search on twit option which will show the figures with real time twitter data
+# 
+searchword1 <- searchontwit(word1, 9000)
+searchword2 <- searchontwit(word2, 9000)
+# cardataNorway <- read.csv("norway_new_car_sales_by_month.csv")
+
+
+# The next method is by using the following 2 functions to retrieve the data which is used within the presentation which searches for electric cars and petrol cars. Simply comment out whichever method you would not like to use
+
+# loadsearchword1<- function(){
+#   githubURL <- "https://github.com/zeonlee/math513presentation/raw/main/searchword1.Rdata"
+#   load(url(githubURL), .GlobalEnv)
+# }
+# 
+# loadsearchword2<- function(){
+#   githubURL <- "https://github.com/zeonlee/math513presentation/raw/main/searchword2.Rdata"
+#   load(url(githubURL), .GlobalEnv)
+# }
+# loadsearchword1()
+# loadsearchword2()
+loadcardataNorway<- function(){
+     githubURL <- "https://github.com/zeonlee/math513presentation/raw/main/cardataNorway.Rdata"
+     load(url(githubURL), .GlobalEnv)
+}
+loadcardataNorway()
+loadcardataElectric<- function(){
+     githubURL <- "https://github.com/zeonlee/math513presentation/raw/main/cardataElectric.Rdata"
+     load(url(githubURL), .GlobalEnv)
+}
+loadcardataElectric()
+
+top10elecpetr <- top10final(searchword1, searchword2)
+
+```
+
+```{r top10words_graph, echo = FALSE, fig.width= 7, fig.height = 4}
+top10elecpetr
+```
+
+### Tweet Locations
+```{r tweetlocation_code,echo=FALSE}
+latlng <- function(dataframe){
+  result <- lat_lng(dataframe) %>% 
+    select(created_at, screen_name, text, lng, lat) %>%
+    na.omit()
+  return (result)
+}
+
+poplocation <- function(df1, df2){
+  graph <- ggplot() +
+    borders("world", colour = "gray85", fill = "gray80") +
+    theme_map() + 
+    geom_point(data = df1, aes(x = lng, y = lat), colour = 'purple', alpha = 0.5) +
+    geom_point(data = df2, aes(x = lng, y = lat), colour = 'blue', alpha = 0.5) +
+    labs(title = paste("Locations of tweets on ", word1, "and", word2)) + 
+    scale_colour_manual(name = "Word", values = c(word1 = "#f04546", word2 = "#3591d1"))
+  return (graph)
+}
+
+mapfinal <- function(w1, w2){
+  loc1 <- latlng(w1)
+  loc2 <- latlng(w2)
+  graph <- poplocation(loc1, loc2)
+  return (graph)
+}
+```
+
+```{r tweetlocation_graph,echo=FALSE, fig.width=7, fig.height=4, fig.cap="blue = word1, purple = word2"}
+mapfinal(searchword1, searchword2)
+```
+
+### Wordclouds 
+
+:::::::::::::: {.columns}
+::: {.column}
+
+```{r electric_wordcloud, fig.cap="", echo=FALSE, fig.show="hold", warning=FALSE, fig.width=4, fig.height=4, fig.cap="Electric cars"}
+cloud1 <- topdata(tokentext(searchword1))
+
+set.seed(1234)
+wordcloud(words = cloud1$word, freq = cloud1$n, random.order = FALSE, max.words = 100, rot.per = 0, colors=brewer.pal(7,"Set1"), scale = c(4.5, 0.1))
+```
+:::
+::: {.column}
+
+```{r petrol_wordcloud, echo=FALSE,fig.cap="Petrol cars", fig.show="hold", warning=FALSE, fig.width=4, fig.height=4}
+cloud2 <- topdata(tokentext(searchword2))
+
+wordcloud(words = cloud2$word, freq = cloud2$n, random.order = FALSE, max.words = 100, rot.per = 0, colors=brewer.pal(7,"Set1"), scale = c(4.5, 0.1))
+```
+:::
+::::::::::::::
+
+### Top Positive and Negative Words for Petrol and Electric Cars with "bing" sentiment
+```{r posneg_code, include=FALSE}
+countposneg <- function(dataframe){
+  result <- dataframe %>% inner_join(get_sentiments("bing")) %>%
+    count(word, sentiment, sort = TRUE) %>%
+    mutate(word = reorder(word, n)) %>% 
+    group_by(sentiment) %>%
+    top_n(10) %>%
+    ungroup()
+  return (result)
+}
+
+graphposneg <- function(dataframe){
+  graph <- dataframe %>% 
+    ggplot(aes(x = reorder(word, n), y = n, fill = sentiment)) +
+    geom_col(show.legend = FALSE) +
+    coord_flip() +
+    facet_wrap(category~sentiment, scales = "free") +
+    labs(title = "Most common Positive and Negative words in tweets",
+       y = "Sentiment",
+       x = NULL) +
+    theme(axis.text = element_text(size = 10, color = "black"), 
+        axis.title = element_text(size = 10, color = "black"),
+        title = element_text(size = 15))
+  return(graph)
+}
+
+posnegfinal <- function(df1, df2){
+  token1 <- tokentext(df1)
+  token2 <- tokentext(df2)
+  posneg1 <- countposneg(token1)
+  posneg2 <- countposneg(token2)
+  posnegcat <- categorize(posneg1, posneg2)
+  posneggraph <- graphposneg(posnegcat)
+  return(posneggraph)
+}
+```
+
+```{r posneg_graph, echo = FALSE, message=FALSE, fig.width=7, fig.height=4}
+posnegfinal(searchword1, searchword2)
+```
+
+### Categorizing Sentiments with Syuzhet and "nrc" Sentiment
+```{r nrc_code, include=FALSE}
+graphemotion <- function(df1, df2){
+  emotionscorepertweet1 <- get_nrc_sentiment(df1$text)
+  emotionscorepertweet2 <- get_nrc_sentiment(df2$text)
+  totalscores1 <- tibble(emotion = names(emotionscorepertweet1), totalscore = colSums(emotionscorepertweet1))
+  totalscores2 <- tibble(emotion = names(emotionscorepertweet2), totalscore = colSums(emotionscorepertweet2))
+  finaltotal <- categorize(totalscores1, totalscores2)
+  graph <- ggplot(finaltotal, mapping = aes( x = emotion, y = totalscore, fill = emotion)) + geom_col() + facet_wrap(~category, scales = "free_y") + theme(axis.text.x = element_text(angle = 90)) +
+    theme(legend.position = "none")
+  return(graph)
+}
+```
+
+```{r nrc_graph, echo=FALSE, message = FALSE, fig.width=7, fig.height=4}
+graphemotion(searchword1, searchword2)
+```
+
+# Statistical Tests
+```{r ttest, include=FALSE}
+scorepertweet <- function(dataframe){
+  scorepertweet <- dataframe %>% 
+    inner_join(get_sentiments("bing")) %>%
+  count(tweetnumber, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>% # negative and positive sentiment in separate columns
+  mutate(score = positive - negative)
+  return(scorepertweet)
+}
+
+tweetscores <- function(df){
+  token <- tokentext(df)
+  score <- scorepertweet(token)
+  return (score)
+}
+library(BSDA)
+tscore1 <- tweetscores(searchword1) # electric
+tscore2 <- tweetscores(searchword2) # petrol
+
+tscores <- t.test(tscore1$score, tscore2$score, "greater", conf.level = .95)
+tsample1 <- t.test(tscore1$score)
+tsample2 <- t.test(tscore2$score)
+
+zsample1 <- sample(tscore1$score, nrow(tscore1)/2)
+zsample2 <- sample(tscore2$score, nrow(tscore2)/2)
+sd1 <- sd(tscore1$score)
+sd2 <- sd(tscore2$score)
+zscore1 <- z.test(zsample1, sigma.x = sd1, conf.level = 0.95)
+zscore2 <- z.test(zsample2, sigma.x = sd2, conf.level = 0.95)
+
+graphvals <- function(df1, df2, w1=word1, w2=word2){
+  bothscores <- categorize(df1, df2, w1, w2)
+  result <- bothscores %>% 
+    group_by(category) %>% 
+    summarize(mean_score = mean(score), sd = sd(score), lower = mean_score - sd, upper = mean_score + sd)
+  return(result)
+}
+
+sumstats <- graphvals(tscore1, tscore2)
+fullscores <- categorize(tscore1, tscore2)
+
+graphstats <- function(word_counts_both, sentiment_means_both, w1 = word1, w2 = word2){
+  ggplot(sentiment_means_both) +
+    geom_bar(word_counts_both, mapping = aes(x = score, fill = category)) + 
+    geom_vline(mapping = aes(xintercept = mean_score)) + 
+    facet_wrap(.~category, scales = "free") + 
+    #geom_vline(mapping = aes(xintercept = lower), linetype = "dashed") +
+    #geom_vline(mapping = aes(xintercept = upper), linetype = "dashed") +
+    geom_text(aes(x = mean_score, y = Inf, label = signif(mean_score, 2)), vjust = 2) +
+    #geom_text(aes(x = lower, y = Inf, label = signif(lower, 2)), vjust = 2) +
+    #geom_text(aes(x = upper, y = Inf, label = signif(upper, 2)), vjust = 2)
+    theme(legend.position = "none") + 
+    labs(title = "Distribution and mean of tweets")
+    
+}
+
+```
+### Visualizing Means
+```{r, echo = FALSE, fig.width=7, fig.height=4}
+graphstats(fullscores, sumstats)
+```
+
+# Is a T-test appropriate?
+
+### One sample, 2 tailed T-test on Electric Cars
+```{r, echo = FALSE, fig.width=7, fig.height=4, fig.cap="null hypothesis: The mean for electric cars is not significant (0)"}
+plot(tsample1)
+```
+
+### One sample, 2 tailed T-test on Petrol Cars
+```{r, echo = FALSE, fig.width=7, fig.height=4, fig.cap="null hypothesis: The mean for petrol cars is not significant (0)"}
+plot(tsample2)
+```
+
+### Two sample, Right tailed T-test
+```{r, echo = FALSE, fig.width=7, fig.height=4, fig.cap="null hypothesis: The mean for electric cars is less than or equal to the mean for petrol cars"}
+plot(tscores)
+```
+
+### Conclusion
+
+**So, should General Motors move towards electric cars?**
+
+Through Twitter sentiment analysis, there is not only more conversation about electric cars but also a better sentiment toward electric cars compared to petrol cars.
+
+Therefore it would be a great idea to move towards electric cars for General Motors. For marketing purposes, GM can make use of trending topics in whatever country they are trying to focus on.
+
+### Rise of Electric Cars in Norway
+
+```{r, include=FALSE}
+# cardataElectric <- read.csv('Electric_Vehicle_Population_Data.csv')
+# cardataNorway <- read.csv('norway_new_car_sales_by_month.csv')
+
+carDataGraphNewNorway <- cardataNorway %>%
+                          group_by(Year) %>%
+                          mutate(coA = (mean(Avg_CO2)/1000)*12 ) %>%
+                          ungroup()
+carDataGraphNewSelection  <- carDataGraphNewNorway  %>%
+                            select(Year, Quantity_Diesel,Quantity_Hybrid, Quantity_Electric) %>%
+                            dplyr::filter(between(Year,2007,2016)) 
+
+
+carDataMelt <- reshape2::melt(carDataGraphNewSelection ,id.vars = "Year")
+
+
+graphA <- ggplot(carDataMelt ,aes(x = Year, y = value, fill = variable )) +
+          geom_bar(stat = "identity") + 
+  labs(y = "Count")
+
+carDataGraphCSelection <- carDataGraphNewNorway  %>%
+                          select(Year, coA) %>%
+                          dplyr::filter(between(Year,2007,2016)) 
+graphD <- ggplot(carDataGraphCSelection , aes(x = Year, y = coA )) +  
+          geom_line(size = 1.5, color="red", group = 1) + 
+          scale_y_continuous(name = "Average Co2 (kg/km)",limits = c(1.0,2.0)) + 
+          geom_point()
+graphD
+
+carDataGraphElectric <- cardataElectric %>%
+                        select(Model.Year, Make, Electric.Vehicle.Type) %>%
+                        dplyr::filter(between(Model.Year,2011,2021)) 
+carDataGraphCount <- carDataGraphElectric %>%
+                    group_by(Electric.Vehicle.Type ) %>%
+                    summarise( n = n ()) %>%
+                    mutate(TotalPercentage = (n / sum(n)) * 100 )
+
+graphH <- ggplot(carDataGraphCount, 
+                 aes(x = Electric.Vehicle.Type,
+                     y = TotalPercentage,
+                     fill = Electric.Vehicle.Type))  +
+                  geom_bar(stat="identity") + theme(legend.position = "none") + 
+  labs(y = "Percentage", x = "Electric vehicle type")
+
+graphH
+
+carDataGraphElectricCount <- carDataGraphElectric %>%
+                          group_by(Electric.Vehicle.Type) %>%
+                          add_tally()
+
+carDataGraphElectricStacked <- carDataGraphElectricCount %>%
+                                group_by(Electric.Vehicle.Type) %>%
+                                mutate(Percentage = (n/sum(n))*100)  
+
+
+graphI <- ggplot(carDataGraphElectricStacked  , 
+                 aes(x = factor(Model.Year),
+                     y = Percentage,
+                     fill = factor(Electric.Vehicle.Type))) +
+              geom_bar(position="stack", stat="identity") + theme(legend.position = "none") + 
+  labs(x = "Year")
+graphI
+```
+
+```{r, echo=FALSE,warning=FALSE, fig.width=7, fig.height=4}
+grid.arrange(graphA, graphD, ncol=1) 
+```
+
+
+
+### Car Sales in Washington, USA
+
+```{r, echo=FALSE, fig.width=7, fig.height=4}
+grid.arrange(graphH, graphI, ncol=1)
+```
+
+
+
+### Considerations of Switching to Electric
+  - U.S. & Biden & Paris Agreement
+  - VES Singapore
+  - CO2 taxes
+  - Charging locations
+  - Charging speed
+  - Other options
+
+### Trends in USA
+
+```{r, include=FALSE}
+top_trends <- function(location){
+  trends <- get_trends(location) %>%
+    arrange(desc(tweet_volume)) %>% 
+    head(10) %>% 
+    ggplot(aes(reorder(trend, tweet_volume), tweet_volume)) + 
+    geom_col(fill = "lightblue", color = "blue") + 
+    coord_flip() +
+    labs(title= paste("Top Trending Topics in", location), 
+         x="Trending topics",
+         y="Tweet volume",
+         caption = "Source: Data collected from Twitter's REST API via rtweet") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(size = 14), 
+          axis.text.y = element_text(size = 14), 
+          axis.title.x = element_text(size = 16),
+          axis.title.y = element_text(size = 16),
+          legend.text = element_text(size = 14),
+          title = element_text(size = 20))
+  return(trends)
+}
+
+
+trends <- top_trends("USA")
+```
+
+```{r, echo=FALSE, fig.width=7, fig.height=4, warning=FALSE}
+trends
+```
+
+
+### References
+“Carbon Tax.” National Environment Agency, www.nea.gov.sg/our-services/climate-change-energy-efficiency/climate-change/carbon-tax#:~:text=The%20carbon%20tax%20is%20set,of%20GHG%20emissions%20by%202030. 
+
+Chen, James. “Z-Test Definition.” Investopedia, Investopedia, 29 Aug. 2020, www.investopedia.com/terms/z/z-test.asp. 
+
+Data.gov. (2020, November 20). Electric vehicle population data. Datasets - CKAN. https://catalog.data.gov/dataset/electric-vehicle-population-data.
+
+Meena, Subhash. “Hypothesis Testing: Difference between Z-Test and T-Test.” Analytics Vidhya, 23 Dec. 2020, www.analyticsvidhya.com/blog/2020/06/statistics-analytics-hypothesis-testing-z-test-t-test/. 
+
+Naldi, Maurizio. “A Review of Computation Methods with R Packages.” ArXiv.org, 24 Jan. 2019, arxiv.org/pdf/1901.08319.pdf. 
+
+Perepølkin, Dmytro. “New Car Sales in Norway.” Kaggle, 18 Feb. 2017, www.kaggle.com/dmi3kno/newcarsalesnorway. 
+
+“The Paris Agreement.” Unfccc.int, unfccc.int/process-and-meetings/the-paris-agreement/the-paris-agreement. 
+
+RS, AbdulMajedRaja. “Sentiment Analysis in R - Good vs Not Good - Handling Negations.” Medium, Towards Data Science, 16 Apr. 2020, towardsdatascience.com/sentiment-analysis-in-r-good-vs-not-good-handling-negations-2404ec9ff2ae. 
+
+Sipra, Vajiha. “Twitter Sentiment Analysis and Visualization Using R.” Medium, Towards Data Science, 21 Jan. 2020, towardsdatascience.com/twitter-sentiment-analysis-and-visualization-using-r-22e1f70f6967. 
+
